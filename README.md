@@ -10,7 +10,7 @@ OptiShop is a grocery routing and navigation system designed to help retailers d
 * Driver: oracledb
 * API Framework: FastAPI (supported via get_db dependency injection)
 
-## Database Architecture
+## Database Architecture: backend/models
 
 The system uses an Object-Oriented approach to map physical grocery stores into a relational database:
 
