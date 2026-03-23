@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.orm import relationship
 from backend.db.db_connection import Base 
 
@@ -10,6 +10,10 @@ class Store(Base):
     
     # Name of the store (e.g., "OptiShop Test Store")
     name = Column(String(100), index=True)
+
+    # Physical dimensions in meters
+    width = Column(Float, default=20.0)
+    height = Column(Float, default=20.0)
     
     # Object-Oriented Relationship: A store can have many aisles.
     # We use the string "Aisle" to refer to the model in aisle.py.
@@ -17,4 +21,4 @@ class Store(Base):
     aisles = relationship("Aisle", back_populates="store", cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<Store(name='{self.name}')>"
+        return f"<Store(name='{self.name}', width={self.width}, height={self.height})>"
