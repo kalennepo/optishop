@@ -6,9 +6,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.logic.store_map import StoreMap
 
-def test_store_map_graph():
-    # 1. Instantiate StoreMap
-    store_map = StoreMap()
+def test_store_map_graph(empty_store_map):
+    # 1. Use empty_store_map fixture
+    store_map = empty_store_map
     
     # 2. Test add_node
     store_map.add_node("entrance", 0.0, 0.0)
@@ -35,7 +35,36 @@ def test_store_map_graph():
     nearest = store_map.get_nearest_node(0.1, 0.1)
     assert nearest == "entrance", f"Expected 'entrance', but got '{nearest}'"
 
-    print("StoreMap Graph tests passed successfully!")
+def test_load_from_store_with_aisles(empty_store_map):
+    # Mocking Store and Aisle
+    class MockAisle:
+        def __init__(self, x_min, y_min, x_max, y_max):
+            self.x_min = x_min
+            self.y_min = y_min
+            self.x_max = x_max
+            self.y_max = y_max
 
-if __name__ == "__main__":
-    test_store_map_graph()
+    class MockStore:
+        def __init__(self, aisles):
+            self.aisles = aisles
+
+    # Create a store with an aisle from (1,1) to (3,3)
+    # Resolution = 1.0
+    aisle = MockAisle(1.0, 1.0, 3.0, 3.0)
+    store = MockStore([aisle])
+    
+    store_map = empty_store_map
+    store_map.load_from_store(store, resolution=1.0)
+    
+    # Node (2,2) with coords x=2, y=2 should be inside the aisle (1<=2<=3, 1<=2<=3)
+    # So node_2_2 should NOT exist.
+    assert not store_map.has_node("node_2_2"), "node_2_2 should be inside the aisle and thus not exist."
+    
+    # Node (0,0) with coords x=0, y=0 should be outside.
+    assert store_map.has_node("node_0_0"), "node_0_0 should be outside the aisle and exist."
+    
+    # Node (1,1) with coords x=1, y=1 is ON the boundary, so it should be UNWALKABLE
+    assert not store_map.has_node("node_1_1"), "node_1_1 is on the aisle boundary and should not exist."
+
+    # Node (4,4) with coords x=4, y=4 should be outside.
+    assert store_map.has_node("node_4_4"), "node_4_4 should be outside the aisle and exist."

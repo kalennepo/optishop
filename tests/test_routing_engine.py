@@ -1,5 +1,6 @@
 import sys
 import os
+import pytest
 from typing import NamedTuple
 
 # Add the root directory to sys.path
@@ -15,9 +16,9 @@ class MockItem:
         self.pos_x = pos_x
         self.pos_y = pos_y
 
-def test_routing_engine():
+def test_routing_engine(empty_store_map):
     # 1. Setup StoreMap with a linear graph
-    sm = StoreMap()
+    sm = empty_store_map
     sm.add_node("entrance", 0.0, 0.0)
     sm.add_node("node_a", 5.0, 0.0)
     sm.add_node("node_b", 10.0, 0.0)
@@ -46,13 +47,30 @@ def test_routing_engine():
     items = [item1, item2, item3]
     
     # Shopper starts at entrance (0,0) and ends at exit (15,0)
-    # Optimal sequence should visit items in their physical order towards the exit:
-    # entrance (Apples) -> node_a (Bread) -> node_b (Milk) -> exit
     optimized_items = engine.get_optimal_item_sequence((0,0), (15,0), items)
     
     assert [i.name for i in optimized_items] == ["Apples", "Bread", "Milk"]
-    
-    print("RoutingEngine tests passed successfully!")
 
-if __name__ == "__main__":
-    test_routing_engine()
+def test_tsp_scaling(empty_store_map):
+    # Setup StoreMap
+    sm = empty_store_map
+    sm.add_node("start", 0.0, 0.0)
+    for i in range(1, 21):
+        sm.add_node(f"node_{i}", float(i), 0.0)
+        sm.add_directed_edge(f"node_{i-1}" if i > 1 else "start", f"node_{i}", 1.0)
+        sm.add_directed_edge(f"node_{i}", f"node_{i-1}" if i > 1 else "start", 1.0)
+    sm.add_node("exit", 21.0, 0.0)
+    sm.add_directed_edge("node_20", "exit", 1.0)
+    sm.add_directed_edge("exit", "node_20", 1.0)
+
+    engine = RoutingEngine(sm)
+
+    # Create 20 items
+    items = [MockItem(f"Item_{i}", float(i), 0.0) for i in range(1, 21)]
+
+    # This should trigger the Nearest Neighbor fallback and return quickly
+    optimized_items = engine.get_optimal_item_sequence((0.0, 0.0), (21.0, 0.0), items)
+
+    assert len(optimized_items) == 20
+    # For this linear setup, Nearest Neighbor should return them in order
+    assert [i.name for i in optimized_items] == [f"Item_{i}" for i in range(1, 21)]

@@ -66,71 +66,96 @@ class RoutingEngine:
 
     def get_optimal_item_sequence(self, entrance_coord: Tuple[float, float], exit_coord: Tuple[float, float], items: list) -> list:
         """
-        Solves TSP for best item order.
+        Solves TSP for best item order. Falls back to Nearest Neighbor for > 15 items.
         """
         if not items:
             return []
 
-        start_node = self.store_map.get_nearest_node(*entrance_coord)
-        end_node = self.store_map.get_nearest_node(*exit_coord)
-        
-        item_nodes = [self.store_map.get_nearest_node(item.pos_x, item.pos_y) for item in items]
+        if len(items) <= 15:
+            start_node = self.store_map.get_nearest_node(*entrance_coord)
+            end_node = self.store_map.get_nearest_node(*exit_coord)
             
-        all_nodes = [start_node] + item_nodes + [end_node]
-        n = len(all_nodes)
-        
-        dist_matrix = [[float('inf')] * n for _ in range(n)]
-        for i in range(n):
-            dist_matrix[i][i] = 0.0
-            for j in range(n):
-                if i == j: continue
-                _, cost = self.find_shortest_path(all_nodes[i], all_nodes[j])
-                dist_matrix[i][j] = cost
-
-        num_items = len(items)
-        dp: Dict[Tuple[int, int], float] = {}
-
-        for i in range(num_items):
-            dp[(1 << i, i)] = dist_matrix[0][i + 1]
-
-        for mask_size in range(2, num_items + 1):
-            for mask in range(1 << num_items):
-                if bin(mask).count('1') != mask_size: continue
-                for i in range(num_items):
-                    if not (mask & (1 << i)): continue
-                    prev_mask = mask ^ (1 << i)
-                    res = min((dp[(prev_mask, j)] + dist_matrix[j + 1][i + 1] 
-                               for j in range(num_items) if prev_mask & (1 << j)), default=float('inf'))
-                    dp[(mask, i)] = res
-
-        full_mask = (1 << num_items) - 1
-        min_total_dist = float('inf')
-        last_item_idx = -1
-        
-        for i in range(num_items):
-            total = dp[(full_mask, i)] + dist_matrix[i + 1][n - 1]
-            if total < min_total_dist:
-                min_total_dist = total
-                last_item_idx = i
-
-        optimal_item_order = []
-        curr_mask = full_mask
-        curr_item = last_item_idx
-        
-        while curr_item != -1:
-            optimal_item_order.append(items[curr_item])
-            prev_mask = curr_mask ^ (1 << curr_item)
-            if prev_mask == 0: break
+            item_nodes = [self.store_map.get_nearest_node(item.pos_x, item.pos_y) for item in items]
+                
+            all_nodes = [start_node] + item_nodes + [end_node]
+            n = len(all_nodes)
             
-            best_prev_item = -1
-            for j in range(num_items):
-                if prev_mask & (1 << j):
-                    d = dp[(prev_mask, j)] + dist_matrix[j + 1][curr_item + 1]
-                    if abs(d - dp[(curr_mask, curr_item)]) < 1e-4:
-                        best_prev_item = j
-                        break
-            curr_mask = prev_mask
-            curr_item = best_prev_item
+            dist_matrix = [[float('inf')] * n for _ in range(n)]
+            for i in range(n):
+                dist_matrix[i][i] = 0.0
+                for j in range(n):
+                    if i == j: continue
+                    _, cost = self.find_shortest_path(all_nodes[i], all_nodes[j])
+                    dist_matrix[i][j] = cost
 
-        optimal_item_order.reverse()
-        return optimal_item_order
+            num_items = len(items)
+            dp: Dict[Tuple[int, int], float] = {}
+
+            for i in range(num_items):
+                dp[(1 << i, i)] = dist_matrix[0][i + 1]
+
+            for mask_size in range(2, num_items + 1):
+                for mask in range(1 << num_items):
+                    if bin(mask).count('1') != mask_size: continue
+                    for i in range(num_items):
+                        if not (mask & (1 << i)): continue
+                        prev_mask = mask ^ (1 << i)
+                        res = min((dp[(prev_mask, j)] + dist_matrix[j + 1][i + 1] 
+                                   for j in range(num_items) if prev_mask & (1 << j)), default=float('inf'))
+                        dp[(mask, i)] = res
+
+            full_mask = (1 << num_items) - 1
+            min_total_dist = float('inf')
+            last_item_idx = -1
+            
+            for i in range(num_items):
+                total = dp[(full_mask, i)] + dist_matrix[i + 1][n - 1]
+                if total < min_total_dist:
+                    min_total_dist = total
+                    last_item_idx = i
+
+            optimal_item_order = []
+            curr_mask = full_mask
+            curr_item = last_item_idx
+            
+            while curr_item != -1:
+                optimal_item_order.append(items[curr_item])
+                prev_mask = curr_mask ^ (1 << curr_item)
+                if prev_mask == 0: break
+                
+                best_prev_item = -1
+                for j in range(num_items):
+                    if prev_mask & (1 << j):
+                        d = dp[(prev_mask, j)] + dist_matrix[j + 1][curr_item + 1]
+                        if abs(d - dp[(curr_mask, curr_item)]) < 1e-4:
+                            best_prev_item = j
+                            break
+                curr_mask = prev_mask
+                curr_item = best_prev_item
+
+            optimal_item_order.reverse()
+            return optimal_item_order
+        else:
+            # Nearest Neighbor Heuristic for scaling
+            current_node = self.store_map.get_nearest_node(*entrance_coord)
+            unvisited_items = list(items)
+            optimal_item_order = []
+            
+            while unvisited_items:
+                best_item = None
+                min_dist = float('inf')
+                best_item_node = None
+                
+                for item in unvisited_items:
+                    item_node = self.store_map.get_nearest_node(item.pos_x, item.pos_y)
+                    _, cost = self.find_shortest_path(current_node, item_node)
+                    if cost < min_dist:
+                        min_dist = cost
+                        best_item = item
+                        best_item_node = item_node
+                
+                optimal_item_order.append(best_item)
+                current_node = best_item_node
+                unvisited_items.remove(best_item)
+                
+            return optimal_item_order

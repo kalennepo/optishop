@@ -1,89 +1,58 @@
 import sys
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import pytest
 
 # Add root directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from backend.db.db_connection import Base
 from backend.models.store import Store
 from backend.models.aisle import Aisle
 from backend.models.grocery_item import GroceryItem
 from backend.logic.shopping_service import ShoppingService
 
-def test_full_system_graph():
-    # 1. Setup in-memory SQLite for testing
-    engine = create_engine("sqlite:///:memory:")
-    SessionLocal = sessionmaker(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+def test_full_system_graph(db_session):
+    # 1. Use db_session fixture
+    db = db_session
 
-    try:
-        # 2. Directly create a Test Store in the DB
-        print("--- Step 1: Creating Test Store in Database ---")
-        test_store = Store(name="Graph-based Grocery Store")
-        db.add(test_store)
-        db.commit()
-        
-        # Add some aisles (needed for dimensions in load_from_store)
-        # Store boundaries: x=0-20, y=0-15
-        aisle1 = Aisle(name="Produce", x_min=2.0, y_min=2.0, x_max=4.0, y_max=10.0, store_id=test_store.id)
-        aisle2 = Aisle(name="Bakery", x_min=8.0, y_min=2.0, x_max=10.0, y_max=10.0, store_id=test_store.id)
-        aisle3 = Aisle(name="Frozen", x_min=14.0, y_min=2.0, x_max=16.0, y_max=10.0, store_id=test_store.id)
-        db.add_all([aisle1, aisle2, aisle3])
-        db.commit()
-        
-        # Add some items
-        item1 = GroceryItem(name="Apples", pos_x=3.0, pos_y=5.0, aisle_id=aisle1.id)
-        item2 = GroceryItem(name="Bread", pos_x=9.0, pos_y=5.0, aisle_id=aisle2.id)
-        item3 = GroceryItem(name="Ice Cream", pos_x=15.0, pos_y=5.0, aisle_id=aisle3.id)
-        db.add_all([item1, item2, item3])
-        db.commit()
-        
-        # 3. Create a Shopping List (deliberately out of physical order)
-        shopping_list = ["Ice Cream", "Apples", "Bread"]
-        print(f"--- Step 2: Shopping List: {shopping_list} ---")
+    # 2. Directly create a Test Store in the DB
+    test_store = Store(name="Graph-based Grocery Store")
+    db.add(test_store)
+    db.commit()
+    
+    # Add some aisles (needed for dimensions in load_from_store)
+    # Store boundaries: x=0-20, y=0-15
+    aisle1 = Aisle(name="Produce", x_min=2.0, y_min=2.0, x_max=4.0, y_max=10.0, store_id=test_store.id)
+    aisle2 = Aisle(name="Bakery", x_min=8.0, y_min=2.0, x_max=10.0, y_max=10.0, store_id=test_store.id)
+    aisle3 = Aisle(name="Frozen", x_min=14.0, y_min=2.0, x_max=16.0, y_max=10.0, store_id=test_store.id)
+    db.add_all([aisle1, aisle2, aisle3])
+    db.commit()
+    
+    # Add some items
+    item1 = GroceryItem(name="Apples", pos_x=3.0, pos_y=5.0, aisle_id=aisle1.id)
+    item2 = GroceryItem(name="Bread", pos_x=9.0, pos_y=5.0, aisle_id=aisle2.id)
+    item3 = GroceryItem(name="Ice Cream", pos_x=15.0, pos_y=5.0, aisle_id=aisle3.id)
+    db.add_all([item1, item2, item3])
+    db.commit()
+    
+    # 3. Create a Shopping List (deliberately out of physical order)
+    shopping_list = ["Ice Cream", "Apples", "Bread"]
 
-        # 4. Use the Shopping Service
-        service = ShoppingService(db)
-        entrance = (0.0, 0.0)
-        exit_pos = (20.0, 0.0)
-        
-        print("--- Step 3: Generating Optimized Route (Graph Mode) ---")
-        result = service.generate_route(
-            store_id=test_store.id,
-            item_names=shopping_list,
-            entrance=entrance,
-            exit_pos=exit_pos
-        )
+    # 4. Use the Shopping Service
+    service = ShoppingService(db)
+    entrance = (0.0, 0.0)
+    exit_pos = (20.0, 0.0)
+    
+    result = service.generate_route(
+        store_id=test_store.id,
+        item_names=shopping_list,
+        entrance=entrance,
+        exit_pos=exit_pos
+    )
 
-        if "error" in result:
-            print(f"Error: {result['error']}")
-            return
+    assert "error" not in result
 
-        # 5. Output Results
-        print("\n--- Route Result ---")
-        print(f"Store: {result['store_name']}")
-        print(f"Optimized Visit Order: {result['optimized_order']}")
-        print(f"Total Nodes in Path: {result['total_steps']}")
-        print(f"Estimated walking distance: {result['estimated_distance']:.2f} meters")
-        
-        # 6. Verify and Visualize
-        print("\n--- Traverse Path (x, y) Coordinates ---")
-        for i, coord in enumerate(result['path_coordinates']):
-            print(f"Step {i:2d}: {coord}")
-
-        # Basic Assertions
-        # Optimal order from (0,0) to (20,0) with these items should be: Apples -> Bread -> Ice Cream
-        assert result['optimized_order'] == ["Apples", "Bread", "Ice Cream"]
-        assert len(result['path_coordinates']) > 0
-        assert all(isinstance(p, tuple) and len(p) == 2 for p in result['path_coordinates'])
-        
-        print("\nSUCCESS: The graph-based system is working flawlessly!")
-
-    finally:
-        db.close()
-
-if __name__ == "__main__":
-    test_full_system_graph()
+    # 5. Basic Assertions
+    # Optimal order from (0,0) to (20,0) with these items should be: Apples -> Bread -> Ice Cream
+    assert result['optimized_order'] == ["Apples", "Bread", "Ice Cream"]
+    assert len(result['path_coordinates']) > 0
+    assert all(isinstance(p, tuple) and len(p) == 2 for p in result['path_coordinates'])

@@ -47,6 +47,7 @@ class StoreMap:
     def load_from_store(self, store, resolution: float = 2.0):
         """
         Populates the graph by creating a grid of nodes based on the store dimensions.
+        Avoids nodes that fall inside an aisle's bounding box.
         Connects adjacent nodes with edges.
         """
         # 1. Determine boundaries
@@ -70,19 +71,26 @@ class StoreMap:
             for c in range(cols):
                 node_id = f"node_{r}_{c}"
                 x, y = c * resolution, r * resolution
-                self.add_node(node_id, x, y)
-                grid_nodes[(r, c)] = node_id
+                
+                # Check if (x, y) is inside any aisle
+                is_unwalkable = False
+                for aisle in store.aisles:
+                    if aisle.x_min <= x <= aisle.x_max and aisle.y_min <= y <= aisle.y_max:
+                        is_unwalkable = True
+                        break
+                
+                if not is_unwalkable:
+                    self.add_node(node_id, x, y)
+                    grid_nodes[(r, c)] = node_id
                 
         # 3. Connect nodes (bidirectional edges for simplicity)
-        for r in range(rows):
-            for c in range(cols):
-                u = grid_nodes[(r, c)]
-                # Connect to Right, Down (and diagonally if we want, but let's stick to 4-way)
-                for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                    nr, nc = r + dr, c + dc
-                    if (nr, nc) in grid_nodes:
-                        v = grid_nodes[(nr, nc)]
-                        self.add_directed_edge(u, v, resolution)
+        for (r, c), u in grid_nodes.items():
+            # Connect to Right, Down, Left, Up
+            for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                nr, nc = r + dr, c + dc
+                if (nr, nc) in grid_nodes:
+                    v = grid_nodes[(nr, nc)]
+                    self.add_directed_edge(u, v, resolution)
 
     def get_nearest_node(self, x: float, y: float) -> Optional[str]:
         """
