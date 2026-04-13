@@ -6,14 +6,6 @@ OptiShop is a high-performance "Indoor GPS" backend designed for high-density gr
 
 OptiShop transforms a physical retail space into a navigable digital map. It calculates optimal routes by considering the exact (x, y) coordinates of every item on a shopper's list, ensuring they never double-back or miss an aisle.
 
-###Scope & Boundaries
-To maintain a focused and high-integrity routing engine, OptiShop adheres to the following boundaries:
-*   **Indoor Focus:** Designed specifically for interior retail layouts; does not provide outdoor GPS or parking lot directions.
-*   **Static Mapping:** Focuses on spatial navigation and layout optimization. It does **not** track real-time inventory levels or stock-outs.
-*   **Pure Navigation:** Operates as a routing utility; it does **not** facilitate financial transactions, payments, or digital coupons.
-
----
-
 ## Tech Stack
 
 *   **Language:** Python 3.12+ (Object-Oriented Architecture)
