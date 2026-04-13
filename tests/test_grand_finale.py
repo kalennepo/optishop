@@ -7,10 +7,12 @@ from sqlalchemy.orm import sessionmaker
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.db.db_connection import Base
-from backend.logic.store_generator import StoreGenerator
+from backend.models.store import Store
+from backend.models.aisle import Aisle
+from backend.models.grocery_item import GroceryItem
 from backend.logic.shopping_service import ShoppingService
 
-def test_full_system():
+def test_full_system_graph():
     # 1. Setup in-memory SQLite for testing
     engine = create_engine("sqlite:///:memory:")
     SessionLocal = sessionmaker(bind=engine)
@@ -18,28 +20,42 @@ def test_full_system():
     db = SessionLocal()
 
     try:
-        # 2. Generate the Test Store in the DB
-        print("--- Step 1: Generating Test Store ---")
-        generator = StoreGenerator(db)
-        test_store = generator.create_test_store("Grand Finale Store")
+        # 2. Directly create a Test Store in the DB
+        print("--- Step 1: Creating Test Store in Database ---")
+        test_store = Store(name="Graph-based Grocery Store")
+        db.add(test_store)
+        db.commit()
+        
+        # Add some aisles (needed for dimensions in load_from_store)
+        # Store boundaries: x=0-20, y=0-15
+        aisle1 = Aisle(name="Produce", x_min=2.0, y_min=2.0, x_max=4.0, y_max=10.0, store_id=test_store.id)
+        aisle2 = Aisle(name="Bakery", x_min=8.0, y_min=2.0, x_max=10.0, y_max=10.0, store_id=test_store.id)
+        aisle3 = Aisle(name="Frozen", x_min=14.0, y_min=2.0, x_max=16.0, y_max=10.0, store_id=test_store.id)
+        db.add_all([aisle1, aisle2, aisle3])
+        db.commit()
+        
+        # Add some items
+        item1 = GroceryItem(name="Apples", pos_x=3.0, pos_y=5.0, aisle_id=aisle1.id)
+        item2 = GroceryItem(name="Bread", pos_x=9.0, pos_y=5.0, aisle_id=aisle2.id)
+        item3 = GroceryItem(name="Ice Cream", pos_x=15.0, pos_y=5.0, aisle_id=aisle3.id)
+        db.add_all([item1, item2, item3])
+        db.commit()
         
         # 3. Create a Shopping List (deliberately out of physical order)
-        shopping_list = ["Bread", "Apples", "Ice Cream"]
+        shopping_list = ["Ice Cream", "Apples", "Bread"]
         print(f"--- Step 2: Shopping List: {shopping_list} ---")
 
-        # 4. Use the Master Shopping Service
+        # 4. Use the Shopping Service
         service = ShoppingService(db)
-        # Assuming Entrance at (0, 0) and Exit at (18, 12)
-        entrance = (1.0, 1.0)
-        exit_pos = (18.0, 1.0)
+        entrance = (0.0, 0.0)
+        exit_pos = (20.0, 0.0)
         
-        print("--- Step 3: Generating Optimized Route ---")
+        print("--- Step 3: Generating Optimized Route (Graph Mode) ---")
         result = service.generate_route(
             store_id=test_store.id,
             item_names=shopping_list,
             entrance=entrance,
-            exit_pos=exit_pos,
-            map_resolution=0.5 # 0.5m grid
+            exit_pos=exit_pos
         )
 
         if "error" in result:
@@ -49,29 +65,25 @@ def test_full_system():
         # 5. Output Results
         print("\n--- Route Result ---")
         print(f"Store: {result['store_name']}")
-        print(f"Items will be visited in this order: {result['optimized_order']}")
-        print(f"Total walking steps: {result['total_steps']}")
-        print(f"Estimated walking distance: {result['estimated_distance']} meters")
+        print(f"Optimized Visit Order: {result['optimized_order']}")
+        print(f"Total Nodes in Path: {result['total_steps']}")
+        print(f"Estimated walking distance: {result['estimated_distance']:.2f} meters")
         
-        # 6. Visualize (To see the layout and path)
-        print("\n--- Store Map & Route Visualization ---")
-        # We need the map object to visualize
-        from backend.logic.store_map import StoreMap
-        # Use the same parameters as in ShoppingService
-        max_x = 20.0
-        max_y = 15.0
-        store_map = StoreMap(width=max_x, height=max_y, resolution=1.0) # Using 1m resolution for better console view
-        store_map.load_from_store(test_store)
-        store_map.visualize(path=result['path_coordinates'], items=result['optimized_items'])
+        # 6. Verify and Visualize
+        print("\n--- Traverse Path (x, y) Coordinates ---")
+        for i, coord in enumerate(result['path_coordinates']):
+            print(f"Step {i:2d}: {coord}")
 
-        # 7. Basic Validations
-        assert result['optimized_order'] == ["Apples", "Bread", "Ice Cream"] # Check if logical (Produce -> Bakery -> Frozen)
+        # Basic Assertions
+        # Optimal order from (0,0) to (20,0) with these items should be: Apples -> Bread -> Ice Cream
+        assert result['optimized_order'] == ["Apples", "Bread", "Ice Cream"]
         assert len(result['path_coordinates']) > 0
+        assert all(isinstance(p, tuple) and len(p) == 2 for p in result['path_coordinates'])
         
-        print("\nSUCCESS: The entire system is working from DB to Pathfinding!")
+        print("\nSUCCESS: The graph-based system is working flawlessly!")
 
     finally:
         db.close()
 
 if __name__ == "__main__":
-    test_full_system()
+    test_full_system_graph()

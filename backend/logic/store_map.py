@@ -1,109 +1,111 @@
-from typing import List, Tuple, Optional, Dict
-from backend.models.store import Store
-from backend.models.aisle import Aisle
-from backend.models.grocery_item import GroceryItem
+from typing import List, Tuple, Dict, Optional, Iterable
+import math
 
 class StoreMap:
     """
-    Represent the physical store layout as a walkable grid.
-    Translates real-world coordinates (meters) to grid cells.
+    Represents the physical store layout as a Directed Graph.
+    Encapsulates node and edge data.
     """
-    def __init__(self, width: float, height: float, resolution: float = 0.5):
+    def __init__(self):
         """
-        :param width: Total width of the store in meters.
-        :param height: Total height of the store in meters.
-        :param resolution: The size of each grid cell in meters (default 0.5m).
+        Initializes an empty directed graph.
         """
-        self.width = width
-        self.height = height
-        self.resolution = resolution
-        
-        # Calculate number of cells
-        self.cols = int(width / resolution)
-        self.rows = int(height / resolution)
-        
-        # Initialize grid: True means walkable, False means blocked
-        # Using a 2D list [row][col]
-        self.grid = [[True for _ in range(self.cols)] for _ in range(self.rows)]
+        self._nodes: Dict[str, Tuple[float, float]] = {}
+        self._edges: Dict[str, List[Dict[str, any]]] = {}
 
-    def world_to_grid(self, x: float, y: float) -> Tuple[int, int]:
-        """Converts real-world (x, y) coordinates to grid indices (row, col)."""
-        col = int(x / self.resolution)
-        row = int(y / self.resolution)
-        return row, col
-
-    def grid_to_world(self, row: int, col: int) -> Tuple[float, float]:
-        """Converts grid indices (row, col) to real-world (x, y) coordinates (center of cell)."""
-        x = (col + 0.5) * self.resolution
-        y = (row + 0.5) * self.resolution
-        return x, y
-
-    def is_in_bounds(self, row: int, col: int) -> bool:
-        """Checks if a grid cell is within the map boundaries."""
-        return 0 <= row < self.rows and 0 <= col < self.cols
-
-    def set_walkable(self, x_min: float, y_min: float, x_max: float, y_max: float, walkable: bool):
-        """Sets a rectangular area as walkable or blocked."""
-        start_row, start_col = self.world_to_grid(x_min, y_min)
-        end_row, end_col = self.world_to_grid(x_max, y_max)
-        
-        for r in range(max(0, start_row), min(self.rows, end_row + 1)):
-            for c in range(max(0, start_col), min(self.cols, end_col + 1)):
-                if self.is_in_bounds(r, c):
-                    self.grid[r][c] = walkable
-
-    def load_from_store(self, store: Store):
+    def add_node(self, node_id: str, x: float, y: float):
         """
-        Populates the grid based on the aisles defined in a Store object.
-        Everything is walkable by default; aisles mark areas as blocked.
+        Adds a node to the graph with its real-world (x, y) coordinates.
         """
-        # Reset grid
-        self.grid = [[True for _ in range(self.cols)] for _ in range(self.rows)]
-        
+        self._nodes[node_id] = (x, y)
+        if node_id not in self._edges:
+            self._edges[node_id] = []
+
+    def add_directed_edge(self, from_node: str, to_node: str, weight: float):
+        """
+        Adds a directed edge between two existing nodes.
+        """
+        if from_node in self._nodes and to_node in self._nodes:
+            self._edges[from_node].append({"to": to_node, "weight": weight})
+
+    def get_node_coords(self, node_id: str) -> Optional[Tuple[float, float]]:
+        """Returns the (x, y) coordinates for a given node ID."""
+        return self._nodes.get(node_id)
+
+    def get_neighbors(self, node_id: str) -> List[Dict[str, any]]:
+        """Returns the list of edges originating from the given node."""
+        return self._edges.get(node_id, [])
+
+    def has_node(self, node_id: str) -> bool:
+        """Checks if a node exists in the map."""
+        return node_id in self._nodes
+
+    def get_all_node_ids(self) -> Iterable[str]:
+        """Returns an iterator over all node IDs."""
+        return self._nodes.keys()
+
+    def load_from_store(self, store, resolution: float = 2.0):
+        """
+        Populates the graph by creating a grid of nodes based on the store dimensions.
+        Connects adjacent nodes with edges.
+        """
+        # 1. Determine boundaries
+        max_x = 0.0
+        max_y = 0.0
         for aisle in store.aisles:
-            # We assume aisles are obstacles
-            self.set_walkable(aisle.x_min, aisle.y_min, aisle.x_max, aisle.y_max, False)
-
-    def is_walkable(self, x: float, y: float) -> bool:
-        """Checks if a real-world coordinate is walkable."""
-        row, col = self.world_to_grid(x, y)
-        if self.is_in_bounds(row, col):
-            return self.grid[row][col]
-        return False
-
-    def get_item_grid_pos(self, item: GroceryItem) -> Tuple[int, int]:
-        """Returns the grid (row, col) for a grocery item."""
-        return self.world_to_grid(item.pos_x, item.pos_y)
-
-    def visualize(self, path: Optional[List[Tuple[float, float]]] = None, items: Optional[List[GroceryItem]] = None):
-        """Prints an ASCII representation of the map, optional path, and items."""
-        path_grid_coords = set()
-        if path:
-            path_grid_coords = {self.world_to_grid(x, y) for x, y in path}
-            
-        item_grid_map = {}
-        if items:
-            for idx, item in enumerate(items):
-                # Use 1-based index as a symbol
-                symbol = str(idx + 1)[-1] 
-                pos = self.get_item_grid_pos(item)
-                item_grid_map[pos] = symbol
-
-        print(f"Map Visualization ({self.rows}x{self.cols})")
-        print("Legend: . = Walkable, # = Aisle, @ = Path, 1-N = Items in Order")
+            max_x = max(max_x, aisle.x_max)
+            max_y = max(max_y, aisle.y_max)
         
-        for r in range(self.rows):
-            row_str = ""
-            for c in range(self.cols):
-                if (r, c) in item_grid_map:
-                    row_str += f"{item_grid_map[(r, c)]} "
-                elif (r, c) in path_grid_coords:
-                    row_str += "@ "
-                elif not self.grid[r][c]:
-                    row_str += "# "
-                else:
-                    row_str += ". "
-            print(row_str)
+        # Add a bit of padding
+        max_x += 2.0
+        max_y += 2.0
+        
+        # 2. Generate nodes in a grid
+        rows = int(max_y / resolution) + 1
+        cols = int(max_x / resolution) + 1
+        
+        grid_nodes = {} # (r, c) -> node_id
+        
+        for r in range(rows):
+            for c in range(cols):
+                node_id = f"node_{r}_{c}"
+                x, y = c * resolution, r * resolution
+                self.add_node(node_id, x, y)
+                grid_nodes[(r, c)] = node_id
+                
+        # 3. Connect nodes (bidirectional edges for simplicity)
+        for r in range(rows):
+            for c in range(cols):
+                u = grid_nodes[(r, c)]
+                # Connect to Right, Down (and diagonally if we want, but let's stick to 4-way)
+                for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                    nr, nc = r + dr, c + dc
+                    if (nr, nc) in grid_nodes:
+                        v = grid_nodes[(nr, nc)]
+                        self.add_directed_edge(u, v, resolution)
+
+    def get_nearest_node(self, x: float, y: float) -> Optional[str]:
+        """
+        Finds the closest node to the given real-world (x, y) coordinate.
+        """
+        nearest_node_id = None
+        min_distance = float('inf')
+        
+        for node_id, (node_x, node_y) in self._nodes.items():
+            distance = math.sqrt((x - node_x)**2 + (y - node_y)**2)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_node_id = node_id
+        
+        return nearest_node_id
+
+    @property
+    def node_count(self) -> int:
+        return len(self._nodes)
+
+    @property
+    def edge_count(self) -> int:
+        return sum(len(e) for e in self._edges.values())
 
     def __repr__(self):
-        return f"<StoreMap(rows={self.rows}, cols={self.cols}, resolution={self.resolution}m)>"
+        return f"<StoreMap(nodes={self.node_count}, edges={self.edge_count})>"

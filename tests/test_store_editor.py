@@ -34,9 +34,24 @@ def test_editor_foundation():
         print("Testing Boundary Validation...")
         try:
             editor.add_aisle(store.id, "Invalid Aisle", 8.0, 8.0, 12.0, 12.0)
-            assert False, "Should have raised a ValueError"
+            assert False, "Should have raised a ValueError for boundaries"
         except ValueError as e:
-            print(f"Correctly caught error: {e}")
+            print(f"Correctly caught boundary error: {e}")
+
+        # 4.5. Test Overlap Validation (Failure expected)
+        print("Testing Overlap Validation...")
+        # Aisle 1 is at (2.0, 2.0) to (3.0, 8.0)
+        # Attempt to add Aisle 2 that overlaps with Aisle 1
+        try:
+            editor.add_aisle(store.id, "Overlapping Aisle", 2.5, 5.0, 4.0, 9.0)
+            assert False, "Should have raised a ValueError for overlap"
+        except ValueError as e:
+            print(f"Correctly caught overlap error: {e}")
+        
+        # Attempt to add Aisle 3 that does NOT overlap
+        print("Testing Non-Overlapping Aisle Addition...")
+        aisle3 = editor.add_aisle(store.id, "Aisle 3", 5.0, 2.0, 6.0, 8.0)
+        assert aisle3.name == "Aisle 3"
 
         # 5. Test Item Management
         print("Testing Item Addition...")
@@ -47,7 +62,7 @@ def test_editor_foundation():
         print("Testing Full Layout Fetch...")
         layout = editor.get_full_layout(store.id)
         assert layout["name"] == "My Editor Store"
-        assert len(layout["aisles"]) == 1
+        assert len(layout["aisles"]) == 2
         assert layout["aisles"][0]["items"][0]["name"] == "Tomato"
 
         print("\nSUCCESS: Store Editor Foundation is solid!")

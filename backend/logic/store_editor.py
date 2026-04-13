@@ -26,7 +26,7 @@ class StoreEditorService:
     # --- Aisle Management ---
     def add_aisle(self, store_id: int, name: str, x_min: float, y_min: float, x_max: float, y_max: float) -> Optional[Aisle]:
         """
-        Adds an aisle and validates that it is within the store's boundaries.
+        Adds an aisle and validates that it is within the store's boundaries and doesn't overlap.
         """
         store = self.get_store(store_id)
         if not store:
@@ -39,6 +39,15 @@ class StoreEditorService:
         # Validation: Does x_min < x_max and y_min < y_max?
         if x_min >= x_max or y_min >= y_max:
             raise ValueError("Invalid coordinates: x_min must be less than x_max, etc.")
+
+        # Validation: Check for overlaps with existing aisles
+        for existing_aisle in store.aisles:
+            # Two rectangles overlap if they intersect on both axes
+            overlap_x = x_min < existing_aisle.x_max and x_max > existing_aisle.x_min
+            overlap_y = y_min < existing_aisle.y_max and y_max > existing_aisle.y_min
+            
+            if overlap_x and overlap_y:
+                raise ValueError(f"Aisle '{name}' overlaps with existing structure '{existing_aisle.name}'")
 
         aisle = Aisle(store_id=store_id, name=name, x_min=x_min, y_min=y_min, x_max=x_max, y_max=y_max)
         self.db.add(aisle)
