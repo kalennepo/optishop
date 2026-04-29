@@ -10,43 +10,46 @@ OptiShop transforms a physical retail space into a navigable digital map. It cal
 
 *   **Language:** Python 3.12+ (Object-Oriented Architecture)
 *   **Database:** Oracle 19c (Primary Data Store)
-*   **ORM:** SQLAlchemy 2.0 (Relational Mapping & Session Management)
+*   **ORM:** SQLAlchemy 2.0 (Relational Mapping & Repository Pattern)
 *   **API Framework:** FastAPI (Asynchronous Service Layer)
+*   **Security:** JSON Web Tokens (JWT), passlib (bcrypt) for password hashing
 *   **Testing:** Pytest (Full Suite with In-Memory SQLite Fixtures)
 
 ---
 
-##Core Architecture
+## Core Architecture
 
-The system is built on a modular, layered architecture to ensure scalability and maintainability.
+The system is built on a modular, layered architecture emphasizing separation of concerns, the Open/Closed Principle (OCP), and strong encapsulation to ensure scalability and maintainability.
 
-### 1. Data Layer (Domain Models)
+### 1. Data & Repository Layer
 The physical store is modeled using a hierarchical relational structure:
+*   **User:** Represents system users with Role-Based Access Control (RBAC), differentiating between standard "shoppers" and "store_owners".
 *   **Store:** The root entity defining the physical dimensions (width/height) of the retail space.
-*   **Aisle:** Represents physical shelving units using **Bounding Boxes** (`x_min`, `y_min`, `x_max`, `y_max`). This allows the system to distinguish between walkable floor space and unwalkable obstacles.
+*   **Aisle:** Represents physical shelving units using **Bounding Boxes** (`x_min`, `y_min`, `x_max`, `y_max`). 
 *   **GroceryItem:** Individual products mapped to specific coordinates within their assigned aisles.
+*   **Repositories:** Dedicated classes (`StoreRepository`, `UserRepository`, `AisleRepository`, `ItemRepository`) abstract all direct SQLAlchemy operations, keeping the business logic purely focused on domain rules.
 
-### 2. Map Generation (`StoreMap`)
-The `StoreMap` service dynamically generates a directed graph representing the store's walkable area. 
-*   **Collision Detection:** During grid generation, the system performs real-time bounding-box checks against all `Aisle` objects. 
-*   **Unwalkable Zones:** Any grid node falling within an aisle's boundary is automatically pruned, preventing the routing engine from calculating paths that "walk through" solid shelves.
+### 2. Map Generation (`StoreMap` & `StoreMapBuilder`)
+The physical layout is dynamically translated into a pure mathematical graph.
+*   **StoreMap:** A decoupled data structure managing raw graph nodes and directed edges, completely ignorant of database models.
+*   **StoreMapBuilder:** A builder factory that ingests physical store dimensions and obstacle bounding boxes to construct the `StoreMap`, mapping walkable spaces and carving out unwalkable shelving zones.
 
-### 3. Routing Engine (`RoutingEngine`)
-OptiShop utilizes a dual-algorithm approach to solve the complex "Grocery Trip" problem:
-*   **A* Pathfinding:** Used for point-to-point navigation between items, utilizing a Euclidean distance heuristic for maximum efficiency.
-*   **Traveling Salesperson (TSP) Optimization:** Used to determine the best *order* in which to visit items on a list.
-    *   **Lists ≤ 15 Items:** Uses an exact **Dynamic Programming (Bitmasking)** approach ($O(2^n \cdot n^2)$) for mathematically perfect routes.
-    *   **Lists > 15 Items:** Automatically falls back to a high-speed **Nearest Neighbor Heuristic** to ensure instant response times for large shopping trips.
+### 3. Routing Engine (`RoutingEngine` & Strategies)
+OptiShop utilizes the **Strategy Pattern** for dynamic algorithm selection based on the shopping list complexity:
+*   **A* Pathfinding:** Resolves precise point-to-point navigation between items, utilizing a Euclidean distance heuristic.
+*   **TSPExactStrategy:** Uses Dynamic Programming (Bitmasking) to solve the Traveling Salesperson Problem optimally for lists ≤ 15 items ($O(2^n \cdot n^2)$).
+*   **NearestNeighborStrategy:** A fast heuristic fallback for lists > 15 items to ensure instant response times for extensive shopping trips.
 
-### 4. Service Layer
-*   **ShoppingService:** The master controller that orchestrates the entire lifecycle from inputting a list to returning a complete, optimized path.
-*   **StoreEditorService:** Provides backend validation for store managers, ensuring aisles do not overlap and items are placed within valid boundaries.
+### 4. Service Layer (Facades)
+*   **ShoppingService:** Orchestrates map construction and algorithm execution behind a clean facade. API consumers interact only with this service to receive optimized routes, remaining completely abstracted from internal graph calculations.
+*   **StoreEditorService:** Manages complete CRUD operations for the store layout, executing complex geometrical validation to actively prevent overlapping aisles and ensure items fit within store bounds.
 
-### 5. RESTful API Layer (FastAPI)
-OptiShop exposes its core logic through a high-performance RESTful API, organized into versioned routers:
-*   **Store Router (`/api/v1/stores`):** Manages store creation, layout retrieval, and the addition of aisles and items.
-*   **Route Router (`/api/v1/route`):** The primary endpoint for pathfinding. Accepts a list of grocery items and returns an optimized, sequenced walking path.
-*   **Interactive Documentation:** The API includes built-in **Swagger UI** (`/docs`) and **ReDoc** (`/redoc`) for real-time endpoint testing and schema exploration.
+### 5. RESTful API & Security (FastAPI)
+OptiShop exposes its logic through a secure, high-performance RESTful API:
+*   **Auth Router (`/api/v1/auth`):** Handles user registration and JWT-based authentication.
+*   **Store Router (`/api/v1/stores`):** Provides complete CRUD endpoints for stores, aisles, and items. State-modifying endpoints are strictly guarded by **Role-Based Access Control**, requiring specific `store_owner` privileges. Includes bulk Map Import/Export functionality and Inventory reporting (`out-of-stock` flagging).
+*   **Route Router (`/api/v1/route`):** Authenticated endpoint for pathfinding. Accepts a list of grocery items and returns a seamlessly optimized, sequenced walking path.
+*   **Cart Router (`/api/v1/carts`):** Allows shoppers to compile active shopping carts and permanently save their favorite cart permutations.
 
 ---
 
@@ -56,19 +59,19 @@ This repository includes a specialized `GEMINI.md` file, which serves as an **Ab
 
 ### What is an AST Repo Map?
 Unlike a standard file tree, the AST Repo Map provides a structural "skeleton" of the entire project's logic. It uses the abstract syntax of the Python files to present:
-*   **Class Hierarchies:** Clear visibility into how `Store`, `Aisle`, and `GroceryItem` relate.
+*   **Class Hierarchies:** Clear visibility into how models and services interact.
 *   **Method Signatures:** Function names, parameters, and return types (e.g., `find_shortest_path(...) -> Tuple[List[str], float]`).
 *   **Docstring Summaries:** High-level explanations of every component's responsibility.
 
 ### Why it exists:
-This map is designed for **Architectural Grounding**. It allows developers and AI agents to maintain a perfect "mental model" of the system's dependencies and spatial logic without the overhead of reading thousands of lines of implementation code. It ensures that every change—from a bug fix to a new feature—is aligned with OptiShop's core design principles.
+This map is designed for **Architectural Grounding**. It allows developers and AI agents to maintain a perfect "mental model" of the system's dependencies and spatial logic without the overhead of reading thousands of lines of implementation code.
 
 ---
 
 ## Setup & Installation
 
 ### 1. Prerequisites
-Ensure you have a Python 3.12+ environment and access to an Oracle 19c instance.
+Ensure you have a Python 3.12+ environment and access to an Oracle 19c instance (or modify the `DatabaseManager` to use SQLite/PostgreSQL locally).
 
 ### 2. Installation
 ```bash
@@ -76,15 +79,20 @@ Ensure you have a Python 3.12+ environment and access to an Oracle 19c instance.
 git clone https://github.com/your-repo/optishop.git
 cd optishop
 
+# Set up virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\\Scripts\\activate
+
 # Install dependencies
 pip install -r requirements.txt
 ```
 
 ### 3. Environment Configuration
-Create a `.env` file in the project root to securely handle your Oracle credentials:
+Create a `.env` file in the project root to securely handle your Oracle credentials and JWT secret:
 ```env
 DB_USERNAME=your_oracle_username
 DB_PASSWORD=your_oracle_password
+SECRET_KEY=your_secure_jwt_secret_key
 ```
 
 ### 4. Running the API Server
@@ -93,7 +101,7 @@ Start the development server using **Uvicorn**:
 # Run the FastAPI server
 python -m backend.main
 ```
-The API will be accessible at `http://localhost:8000`. You can access the interactive documentation at `http://localhost:8000/docs`.
+The API will be accessible at `http://localhost:8000`. You can access the interactive Swagger documentation at `http://localhost:8000/docs`.
 
 ---
 
@@ -104,7 +112,7 @@ OptiShop maintains a rigorous testing standard using **Pytest**. To ensure speed
 ### Key Testing Features:
 *   **In-Memory SQLite:** Every test run creates a fresh, ephemeral SQLite database in RAM, ensuring no data leakage between tests.
 *   **Fixture Injection:** Reusable `db_session` and `empty_store_map` fixtures streamline test setup and teardown.
-*   **Coverage:** Tests cover everything from basic graph connectivity to complex TSP scaling and aisle collision detection.
+*   **Dependency Override:** API endpoints are thoroughly decoupled, enabling seamless mocked integration testing.
 
 ### Running Tests:
 ```bash

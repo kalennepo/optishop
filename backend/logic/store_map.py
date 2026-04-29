@@ -44,54 +44,6 @@ class StoreMap:
         """Returns an iterator over all node IDs."""
         return self._nodes.keys()
 
-    def load_from_store(self, store, resolution: float = 2.0):
-        """
-        Populates the graph by creating a grid of nodes based on the store dimensions.
-        Avoids nodes that fall inside an aisle's bounding box.
-        Connects adjacent nodes with edges.
-        """
-        # 1. Determine boundaries
-        max_x = 0.0
-        max_y = 0.0
-        for aisle in store.aisles:
-            max_x = max(max_x, aisle.x_max)
-            max_y = max(max_y, aisle.y_max)
-        
-        # Add a bit of padding
-        max_x += 2.0
-        max_y += 2.0
-        
-        # 2. Generate nodes in a grid
-        rows = int(max_y / resolution) + 1
-        cols = int(max_x / resolution) + 1
-        
-        grid_nodes = {} # (r, c) -> node_id
-        
-        for r in range(rows):
-            for c in range(cols):
-                node_id = f"node_{r}_{c}"
-                x, y = c * resolution, r * resolution
-                
-                # Check if (x, y) is inside any aisle
-                is_unwalkable = False
-                for aisle in store.aisles:
-                    if aisle.x_min <= x <= aisle.x_max and aisle.y_min <= y <= aisle.y_max:
-                        is_unwalkable = True
-                        break
-                
-                if not is_unwalkable:
-                    self.add_node(node_id, x, y)
-                    grid_nodes[(r, c)] = node_id
-                
-        # 3. Connect nodes (bidirectional edges for simplicity)
-        for (r, c), u in grid_nodes.items():
-            # Connect to Right, Down, Left, Up
-            for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                nr, nc = r + dr, c + dc
-                if (nr, nc) in grid_nodes:
-                    v = grid_nodes[(nr, nc)]
-                    self.add_directed_edge(u, v, resolution)
-
     def get_nearest_node(self, x: float, y: float) -> Optional[str]:
         """
         Finds the closest node to the given real-world (x, y) coordinate.

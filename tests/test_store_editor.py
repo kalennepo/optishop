@@ -6,11 +6,18 @@ import pytest
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.logic.store_editor import StoreEditorService
+from backend.repositories.store import StoreRepository
+from backend.repositories.aisle import AisleRepository
+from backend.repositories.item import ItemRepository
 
 def test_editor_foundation(db_session):
     # 1. Use db_session fixture
     db = db_session
-    editor = StoreEditorService(db)
+    editor = StoreEditorService(
+        store_repo=StoreRepository(db),
+        aisle_repo=AisleRepository(db),
+        item_repo=ItemRepository(db)
+    )
 
     # 2. Test Store Creation
     store = editor.create_store("My Editor Store", width=10.0, height=10.0)
@@ -46,3 +53,24 @@ def test_editor_foundation(db_session):
     assert layout["name"] == "My Editor Store"
     assert len(layout["aisles"]) == 2
     assert layout["aisles"][0]["items"][0]["name"] == "Tomato"
+
+    # 7. Test Updating Aisle
+    updated_aisle = editor.update_aisle(aisle.id, name="Produce Aisle")
+    assert updated_aisle.name == "Produce Aisle"
+    
+    # 8. Test Invalid Update (overlap)
+    with pytest.raises(ValueError) as excinfo:
+        editor.update_aisle(aisle3.id, x_min=2.0, y_min=2.0, x_max=3.0, y_max=8.0) # overlaps with aisle 1
+    assert "overlap" in str(excinfo.value).lower()
+    
+    # 9. Test Updating Item
+    updated_item = editor.update_item(item.id, name="Cherry Tomato", pos_y=6.0)
+    assert updated_item.name == "Cherry Tomato"
+    assert updated_item.pos_y == 6.0
+
+    # 10. Test Deletions
+    assert editor.delete_item(item.id) is True
+    assert editor.delete_aisle(aisle3.id) is True
+    layout = editor.get_full_layout(store.id)
+    assert len(layout["aisles"]) == 1 # Only one aisle left
+    assert len(layout["aisles"][0]["items"]) == 0 # No items left

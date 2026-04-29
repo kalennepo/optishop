@@ -9,6 +9,7 @@ from backend.models.store import Store
 from backend.models.aisle import Aisle
 from backend.models.grocery_item import GroceryItem
 from backend.logic.shopping_service import ShoppingService
+from backend.repositories.store import StoreRepository
 
 def test_full_system_graph(db_session):
     # 1. Use db_session fixture
@@ -38,7 +39,7 @@ def test_full_system_graph(db_session):
     shopping_list = ["Ice Cream", "Apples", "Bread"]
 
     # 4. Use the Shopping Service
-    service = ShoppingService(db)
+    service = ShoppingService(StoreRepository(db))
     entrance = (0.0, 0.0)
     exit_pos = (20.0, 0.0)
     

@@ -1,18 +1,19 @@
 from typing import List, Tuple, Optional, Dict
-from sqlalchemy.orm import Session
 from backend.models.store import Store
 from backend.models.aisle import Aisle
 from backend.models.grocery_item import GroceryItem
 from backend.logic.store_map import StoreMap
+from backend.logic.store_map_builder import StoreMapBuilder
 from backend.logic.routing_engine import RoutingEngine
+from backend.repositories.store import StoreRepository
 
 class ShoppingService:
     """
     The Master Service that coordinates the entire shopping route generation.
     It ties the Database, Map, and RoutingEngine together.
     """
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(self, store_repo: StoreRepository):
+        self.store_repo = store_repo
 
     def generate_route(
         self, 
@@ -25,7 +26,7 @@ class ShoppingService:
         Generates a complete, optimized shopping path.
         """
         # 1. Fetch the store and its layout from DB
-        store = self.db.query(Store).filter(Store.id == store_id).first()
+        store = self.store_repo.get_by_id(store_id)
         if not store:
             return {"error": "Store not found"}
 
@@ -44,8 +45,8 @@ class ShoppingService:
             return {"error": "No items found from the list"}
 
         # 3. Initialize the StoreMap and RoutingEngine
-        store_map = StoreMap()
-        store_map.load_from_store(store) # Loads a default grid graph
+        obstacles = [(a.x_min, a.y_min, a.x_max, a.y_max) for a in store.aisles]
+        store_map = StoreMapBuilder().build(width=store.width, height=store.height, obstacles=obstacles)
         
         engine = RoutingEngine(store_map)
 

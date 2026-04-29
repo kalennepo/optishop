@@ -31,12 +31,33 @@ class DatabaseManager:
 
     def _create_engine(self):
         """Private method to construct the URL and return the engine."""
-        if not self.username or not self.password:
-            return None
+        engine = None
+        if self.username and self.password:
+            encoded_password = urllib.parse.quote_plus(self.password)
+            db_url = f"oracle+oracledb://{self.username}:{encoded_password}@{self.host}:{self.port}/{self.sid}"
+            try:
+                engine = create_engine(db_url)
+                # Quick test to see if Oracle is reachable (e.g., behind VPN)
+                with engine.connect() as conn:
+                    pass
+            except Exception as e:
+                print(f"Warning: Could not connect to Oracle DB ({e}). Falling back to SQLite.")
+                engine = None
+                
+        if not engine:
+            print("Using local SQLite database for development.")
+            db_url = "sqlite:///./optishop.db"
+            engine = create_engine(db_url, connect_args={"check_same_thread": False})
             
-        encoded_password = urllib.parse.quote_plus(self.password)
-        db_url = f"oracle+oracledb://{self.username}:{encoded_password}@{self.host}:{self.port}/{self.sid}"
-        return create_engine(db_url)
+            # Auto-create tables for SQLite to make local testing easy
+            from backend.models.user import User
+            from backend.models.store import Store
+            from backend.models.aisle import Aisle
+            from backend.models.grocery_item import GroceryItem
+            from backend.models.cart import Cart, CartItem
+            Base.metadata.create_all(bind=engine)
+            
+        return engine
 
     def get_db(self):
         """Yields a database session. Used for FastAPI dependency injection."""

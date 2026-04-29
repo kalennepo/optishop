@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from backend.db.db_connection import Base 
 
@@ -12,6 +12,8 @@ class GroceryItem(Base):
     # Precise coordinate of the item for the routing algorithm
     pos_x = Column(Float)
     pos_y = Column(Float)
+    
+    in_stock = Column(Boolean, default=True)
 
     # OOP Relationship back to the Aisle/Column
     aisle = relationship("Aisle", back_populates="items")

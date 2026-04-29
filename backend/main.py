@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.routers import store_router, route_router
+from backend.api.routers import store_router, route_router, auth_router, cart_router
 
 # 1. Initialize FastAPI App
 app = FastAPI(
@@ -24,8 +24,10 @@ app.add_middleware(
 
 # 3. Register Routers
 # Including routers under the /api/v1 versioned prefix
+app.include_router(auth_router.router, prefix="/api/v1")
 app.include_router(store_router.router, prefix="/api/v1")
 app.include_router(route_router.router, prefix="/api/v1")
+app.include_router(cart_router.router, prefix="/api/v1")
 
 # 4. Health Check Endpoint
 @app.get("/health", tags=["health"])

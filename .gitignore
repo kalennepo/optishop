@@ -2,3 +2,13 @@
 venv/
 venv-win/
 __pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.db
+.coverage
+htmlcov/
+.DS_Store
+CONTEXT.md
+GEMINI.md
+sprint*.md
