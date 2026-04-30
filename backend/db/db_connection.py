@@ -21,9 +21,9 @@ class DatabaseManager:
         self.password = os.getenv("DB_PASSWORD")
         
         # Connection Details
-        self.host = "10.110.10.90"
-        self.port = "1521"
-        self.sid = "oracle"
+        self.host = os.getenv("DB_HOST")
+        self.port = os.getenv("DB_PORT")
+        self.sid = os.getenv("DB_SID")
         
         # Setup Engine and Session
         self.engine = self._create_engine()
@@ -32,7 +32,7 @@ class DatabaseManager:
     def _create_engine(self):
         """Private method to construct the URL and return the engine."""
         engine = None
-        if self.username and self.password:
+        if self.username and self.password and self.host and self.port and self.sid:
             encoded_password = urllib.parse.quote_plus(self.password)
             db_url = f"oracle+oracledb://{self.username}:{encoded_password}@{self.host}:{self.port}/{self.sid}"
             try:

@@ -1,0 +1,10 @@
+INFO:     Will watch for changes in these directories: ['/mnt/c/Users/logan/Desktop/IT326/GroupProject/OptiShop']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [1511] using StatReload
+Warning: Could not connect to Oracle DB ((oracledb.exceptions.OperationalError) DPY-6005: cannot connect to database (CONNECTION_ID=V69/uB0tx2bCipqF4SaQNQ==).
+timed out
+(Background on this error at: https://sqlalche.me/e/20/e3q8)). Falling back to SQLite.
+Using local SQLite database for development.
+INFO:     Started server process [1533]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
