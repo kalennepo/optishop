@@ -1,0 +1,75 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\jake1\\OneDrive\\Documents\\optishop']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [32140] using StatReload
+INFO:     Started server process [25888]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Using local SQLite database for development.
+INFO:     127.0.0.1:53876 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53878 - "POST /api/v1/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63723 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51017 - "OPTIONS /api/v1/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51017 - "POST /api/v1/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "OPTIONS /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "OPTIONS /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "OPTIONS /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62559 - "OPTIONS /api/v1/stores/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62559 - "POST /api/v1/stores/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62559 - "OPTIONS /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62559 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59669 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55411 - "OPTIONS /api/v1/stores/1/aisles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55411 - "POST /api/v1/stores/1/aisles HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52029 - "POST /api/v1/stores/1/aisles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52029 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51852 - "OPTIONS /api/v1/stores/aisles/1/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51852 - "POST /api/v1/stores/aisles/1/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51852 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53785 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60073 - "OPTIONS /api/v1/stores/aisles/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60073 - "DELETE /api/v1/stores/aisles/1 HTTP/1.1" 204 No Content
+INFO:     127.0.0.1:60073 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54579 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54579 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53693 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59694 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58436 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54609 - "OPTIONS /api/v1/route/optimize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54609 - "POST /api/v1/route/optimize HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49908 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49908 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57273 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54400 - "POST /api/v1/stores/1/aisles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54400 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59712 - "POST /api/v1/stores/1/aisles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59712 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60988 - "POST /api/v1/stores/aisles/1/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60988 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63772 - "OPTIONS /api/v1/stores/items/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63772 - "PUT /api/v1/stores/items/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63772 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60118 - "OPTIONS /api/v1/stores/aisles/2/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60118 - "POST /api/v1/stores/aisles/2/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60118 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53690 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53690 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53690 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54830 - "POST /api/v1/route/optimize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "OPTIONS /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "OPTIONS /api/v1/stores/aisles/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "PUT /api/v1/stores/aisles/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "OPTIONS /api/v1/stores/items/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "PUT /api/v1/stores/items/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "OPTIONS /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64906 - "OPTIONS /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64906 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "GET /api/v1/carts/favorites HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61376 - "GET /api/v1/stores/1/layout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52019 - "OPTIONS /api/v1/route/optimize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52019 - "POST /api/v1/route/optimize HTTP/1.1" 200 OK
