@@ -1,11 +1,12 @@
 import ast
 import os
+import re
 
-# Updated to include your specific gitignore entries (like venv-win)
-IGNORE_DIRS = {'.git', '__pycache__', 'venv', 'venv-win', '.venv', '.pytest_cache'}
+# Updated to include frontend and backend gitignore entries
+IGNORE_DIRS = {'.git', '__pycache__', 'venv', 'venv-win', '.venv', '.pytest_cache', 'node_modules', 'dist', 'dist-ssr'}
 
-def format_function(node, indent=0):
-    """Helper to format a function signature, return type, and brief docstring."""
+def format_py_function(node, indent=0):
+    """Helper to format a Python function signature, return type, and brief docstring."""
     args = [arg.arg for arg in node.args.args]
     arg_str = ", ".join(args)
     
@@ -24,7 +25,7 @@ def format_function(node, indent=0):
     ind = " " * indent
     return f"{ind}def {node.name}({arg_str}){ret}:{doc_str}"
 
-def parse_file(filepath):
+def parse_py_file(filepath):
     """Parses a Python file and returns its AST skeleton."""
     with open(filepath, 'r', encoding='utf-8') as f:
         try:
@@ -41,30 +42,54 @@ def parse_file(filepath):
             
             for sub_node in node.body:
                 if isinstance(sub_node, ast.FunctionDef):
-                    skeleton.append(format_function(sub_node, indent=4))
+                    skeleton.append(format_py_function(sub_node, indent=4))
                     
         elif isinstance(node, ast.FunctionDef):
-            skeleton.append(format_function(node, indent=0))
+            skeleton.append(format_py_function(node, indent=0))
             
     return skeleton
 
+def parse_js_file(filepath):
+    """Parses a JS/JSX file using regex to extract exported functions and components."""
+    skeleton = []
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        # Regex to catch standard functions and arrow functions (React components/API calls)
+        func_pattern = re.compile(r'(?:export\s+)?(?:default\s+)?(?:function\s+([A-Za-z0-9_]+)\s*\(|const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z0-9_]+)\s*=>)')
+        
+        matches = func_pattern.findall(content)
+        for m in matches:
+            name = m[0] or m[1]
+            if name:
+                skeleton.append(f"function {name}(...)")
+    except Exception:
+        pass
+        
+    return skeleton
+
 def generate_map(root_dir):
-    """Walks the directory and builds the repo map."""
+    """Walks the directory and builds the full-stack repo map."""
     repo_map = []
     
     for dirpath, dirnames, filenames in os.walk(root_dir):
         # Filter out ignored directories
         dirnames[:] = [d for d in dirnames if d not in IGNORE_DIRS]
         for filename in filenames:
+            filepath = os.path.join(dirpath, filename)
+            rel_path = os.path.relpath(filepath, root_dir).replace("\\", "/")
+            
+            skeleton = []
             if filename.endswith(".py"):
-                filepath = os.path.join(dirpath, filename)
-                skeleton = parse_file(filepath)
-                if skeleton:
-                    rel_path = os.path.relpath(filepath, root_dir)
-                    # Convert Windows backslashes to forward slashes for clean output
-                    rel_path = rel_path.replace("\\", "/") 
-                    repo_map.append(f"\n# {rel_path}")
-                    repo_map.extend(skeleton)
+                skeleton = parse_py_file(filepath)
+            # Parse React frontend files, ignoring config files to save tokens
+            elif filename.endswith((".js", ".jsx")) and not filename.endswith(".config.js"):
+                skeleton = parse_js_file(filepath)
+                
+            if skeleton:
+                repo_map.append(f"\n# {rel_path}")
+                repo_map.extend(skeleton)
                     
     return "\n".join(repo_map)
 
@@ -73,14 +98,16 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.abspath(__file__))
     ast_map = generate_map(root_dir=project_root)
     
-    # Custom preamble tailored to OptiShop's architecture and SRS
-    preamble = """# OPTISHOP AST REPO MAP
+    # Custom preamble tailored to OptiShop's Full-Stack architecture
+    preamble = """# OPTISHOP FULL-STACK REPO MAP
 SYSTEM INSTRUCTIONS:
 1. LOGIC OMITTED: Functions are NOT empty. Implementations are abstracted for context efficiency.
-2. READ/WRITE PROTOCOL: To modify a function, you MUST ask the user to provide the specific file path first. Do NOT hallucinate modifications without the source file.
-3. ARCHITECTURAL GROUNDING: OptiShop acts as an "Indoor GPS" for grocery stores. It uses SQLAlchemy/Oracle 19c for the data layer, and A* Pathfinding + TSP (Traveling Salesperson) for the routing engine.
+2. READ/WRITE PROTOCOL: To modify a function or component, you MUST ask the user to provide the specific file path first. Do NOT hallucinate modifications without the source file.
+3. ARCHITECTURAL GROUNDING: OptiShop is a full-stack "Indoor GPS" for grocery stores. 
+   - Backend: Python 3.12+, FastAPI, SQLAlchemy (Oracle 19c/SQLite). Uses A* Pathfinding + TSP for routing.
+   - Frontend: React 18 + Vite, Tailwind CSS, custom SVG Map rendering.
 4. SCOPE BOUNDARIES: OptiShop DOES NOT track real-time inventory, handle financial transactions, or provide outdoor GPS directions.
-5. PRECISION: Use exact class, function, and file names from this map.
+5. PRECISION: Use exact class, function, component, and file names from this map.
 
 ---
 
@@ -89,8 +116,8 @@ SYSTEM INSTRUCTIONS:
     output_path = os.path.join(project_root, "GEMINI.md")
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(preamble)
-        f.write("```python\n")
+        f.write("```javascript\n")
         f.write(ast_map)
         f.write("\n```\n")
         
-    print(f"Successfully generated token-optimized AST map at: {output_path}")
+    print(f"Successfully generated token-optimized Full-Stack map at: {output_path}")

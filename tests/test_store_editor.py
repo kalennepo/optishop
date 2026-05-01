@@ -74,3 +74,51 @@ def test_editor_foundation(db_session):
     layout = editor.get_full_layout(store.id)
     assert len(layout["aisles"]) == 1 # Only one aisle left
     assert len(layout["aisles"][0]["items"]) == 0 # No items left
+
+def test_editor_edge_cases(db_session):
+    db = db_session
+    editor = StoreEditorService(
+        store_repo=StoreRepository(db),
+        aisle_repo=AisleRepository(db),
+        item_repo=ItemRepository(db)
+    )
+
+    store = editor.create_store("Test Store", width=10.0, height=10.0)
+    
+    # add_aisle: store is None
+    assert editor.add_aisle(999, "Aisle 1", 0.0, 0.0, 1.0, 1.0) is None
+
+    # add_aisle: invalid coordinates
+    with pytest.raises(ValueError) as excinfo:
+        editor.add_aisle(store.id, "Aisle Invalid", 5.0, 5.0, 2.0, 8.0) # x_min > x_max
+    assert "invalid coordinates" in str(excinfo.value).lower()
+
+    aisle = editor.add_aisle(store.id, "Aisle 1", 2.0, 2.0, 3.0, 8.0)
+
+    # update_aisle: aisle is None
+    assert editor.update_aisle(999, name="New Name") is None
+
+    # update_aisle: out of bounds
+    with pytest.raises(ValueError) as excinfo:
+        editor.update_aisle(aisle.id, x_max=15.0)
+    assert "outside of store boundaries" in str(excinfo.value).lower()
+
+    # update_aisle: invalid coordinates
+    with pytest.raises(ValueError) as excinfo:
+        editor.update_aisle(aisle.id, y_min=9.0) # y_min > y_max (which is 8.0)
+    assert "invalid coordinates" in str(excinfo.value).lower()
+
+    # add_item_to_aisle: aisle is None
+    assert editor.add_item_to_aisle(999, "Item", 1.0, 1.0) is None
+    
+    # update_item: item is None
+    assert editor.update_item(999, name="New Item") is None
+    
+    # delete_item: item is None
+    assert editor.delete_item(999) is False
+
+    # delete_aisle: aisle is None
+    assert editor.delete_aisle(999) is False
+    
+    # get_full_layout: store is None
+    assert editor.get_full_layout(999) == {}

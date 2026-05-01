@@ -107,12 +107,17 @@ The API will be accessible at `http://localhost:8000`. You can access the intera
 
 ## Testing Suite
 
-OptiShop maintains a rigorous testing standard using **Pytest**. To ensure speed and isolation, the testing suite utilizes a `conftest.py` configuration with reusable fixtures.
+OptiShop maintains a rigorous testing standard using **Pytest**, featuring a comprehensive suite of 44 tests covering all core backend logic without modifying the domain models. To ensure speed and isolation, the testing suite utilizes a `conftest.py` configuration with a shared `StaticPool` and reusable fixtures.
+
+### Comprehensive Coverage Areas:
+*   **Security & Dependencies:** Exhaustive validation of JWT token generation, expiration handling, password hashing (`bcrypt`), and RBAC dependency injection (`require_store_owner`).
+*   **Algorithm Basis Paths:** Isolated, mocked unit testing for the `TSPExactStrategy` and `NearestNeighborStrategy` ensuring every logical branch, including edge cases (0 items, 1 item, identical coordinates), executes flawlessly.
+*   **Integration Routers:** End-to-end API testing using FastAPI's `TestClient`. Verifies complete HTTP request/response cycles, domain validation rules (e.g., overlapping aisles), and proper 400/401/403/404 error handling for Auth, Store, Cart, and Route endpoints.
 
 ### Key Testing Features:
-*   **In-Memory SQLite:** Every test run creates a fresh, ephemeral SQLite database in RAM, ensuring no data leakage between tests.
-*   **Fixture Injection:** Reusable `db_session` and `empty_store_map` fixtures streamline test setup and teardown.
-*   **Dependency Override:** API endpoints are thoroughly decoupled, enabling seamless mocked integration testing.
+*   **In-Memory SQLite:** Every test run uses a fast, ephemeral SQLite database in RAM (`check_same_thread=False` with a `StaticPool`) ensuring isolated but state-persistent execution during client requests.
+*   **Fixture Injection:** Reusable `db_session`, `client`, and authentication header fixtures streamline test setup and teardown.
+*   **Dependency Override:** FastAPI's `dependency_overrides` feature is used to seamlessly inject the test database session into the API endpoints.
 
 ### Running Tests:
 ```bash
