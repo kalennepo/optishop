@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getStoreLayout, optimizeRoute, createCart, getFavoriteCarts, favoriteCart, deleteFavoriteCart } from '../api/client';
+import { getStoreLayout, optimizeRoute, createCart, getFavoriteCarts, favoriteCart, deleteFavoriteCart, reportOutOfStock } from '../api/client';
 import StoreMap from '../components/StoreMap';
 import ShoppingList from '../components/ShoppingList';
 
@@ -16,6 +16,8 @@ export default function ShopperView() {
   const [routeResult, setRouteResult] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
+
+  const [reportedItems, setReportedItems] = useState(new Set());
 
   const [cartName, setCartName] = useState('');
   const [savingCart, setSavingCart] = useState(false);
@@ -81,6 +83,13 @@ export default function ShopperView() {
     } finally {
       setSavingCart(false);
     }
+  };
+
+  const handleReportOutOfStock = async (itemId) => {
+    try {
+      await reportOutOfStock(itemId);
+      setReportedItems((prev) => new Set(prev).add(itemId));
+    } catch {}
   };
 
   const handleDeleteFavorite = async (cartId) => {
@@ -152,14 +161,28 @@ export default function ShopperView() {
               {' '}· {routeResult.total_steps} steps
             </p>
             <ol className="flex flex-col gap-1">
-              {routeResult.optimized_order.map((name, i) => (
-                <li key={name} className="flex items-center gap-2 text-sm">
-                  <span className="w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold flex-shrink-0">
-                    {i + 1}
-                  </span>
-                  <span className="text-gray-700">{name}</span>
-                </li>
-              ))}
+              {routeResult.optimized_order.map((name, i) => {
+                const item = routeResult.optimized_items[i];
+                const reported = item && reportedItems.has(item.id);
+                return (
+                  <li key={name} className="flex items-center gap-2 text-sm">
+                    <span className="w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold flex-shrink-0">
+                      {i + 1}
+                    </span>
+                    <span className="text-gray-700 flex-1">{name}</span>
+                    {item && (
+                      <button
+                        onClick={() => handleReportOutOfStock(item.id)}
+                        disabled={reported}
+                        title="Report out of stock"
+                        className="text-xs text-gray-400 hover:text-orange-500 disabled:text-orange-400 disabled:cursor-default transition-colors flex-shrink-0"
+                      >
+                        {reported ? 'Reported' : 'Out of stock?'}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ol>
           </div>
         )}
